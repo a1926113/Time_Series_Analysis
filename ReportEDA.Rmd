@@ -1,0 +1,47 @@
+---
+title: "Singapore Birth and Fertility EDA"
+author: "Ebony Hunt"
+date: "2026-03-19"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readr)
+library(tidyr)
+library(dplyr)
+```
+
+### github Repository: <https://github.com/a1926113/Time_Series_Analysis>
+
+Read in the data
+
+```{r read_data, warning=FALSE, show_col_types = FALSE}
+BirthsAndFertilityRatesAnnual <- read_csv("C:/Users/ebony/OneDrive - University of Adelaide/Desktop/2026 Time Series/BirthsAndFertilityRatesAnnual (1).csv")
+
+head(BirthsAndFertilityRatesAnnual)
+```
+There are some years that are character variables, and some years that are doubles. Every year is converted to doubles and data listed as "na" is reformatted to be a correct NA.
+```{r to_double}
+
+BirthsAndFertilityRatesAnnual <- BirthsAndFertilityRatesAnnual |>
+  mutate(across(2:67, as.character)) |>
+  mutate(across(2:67, ~na_if(., "na"))) |>
+  mutate(across(2:67, as.double))
+
+
+``` 
+The data is not in an optimal format. We need to pivot longer
+
+```{r pivot_longer,warning=FALSE}
+
+BirthsAndFertilityRatesAnnual <- BirthsAndFertilityRatesAnnual |>
+  pivot_longer(cols = -DataSeries,
+               names_to = "Year",
+               values_to = "Value") |>
+  pivot_wider(names_from = DataSeries,
+              values_from = "Value")
+
+head(BirthsAndFertilityRatesAnnual)
+
+```
