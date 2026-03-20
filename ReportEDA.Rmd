@@ -10,6 +10,10 @@ knitr::opts_chunk$set(echo = TRUE)
 library(readr)
 library(tidyr)
 library(dplyr)
+library(tsibble)
+library(feasts)
+library(fable)
+library(ggplot2)
 ```
 
 ### github Repository: <https://github.com/a1926113/Time_Series_Analysis>
@@ -29,9 +33,10 @@ BirthsAndFertilityRatesAnnual <- BirthsAndFertilityRatesAnnual |>
   mutate(across(2:67, ~na_if(., "na"))) |>
   mutate(across(2:67, as.double))
 
+BirthsAndFertilityRatesAnnual$Year <- as.integer(BirthsAndFertilityRatesAnnual$Year)
 
 ``` 
-The data is not in an optimal format. We need to pivot longer
+The data is not in an optimal format. The years become the rows and the variables become the columns. The report is only looking to investigate the Total Fertility Rate, and the Total Live Births so every other column will also be filtered out. 
 
 ```{r pivot_longer,warning=FALSE}
 
@@ -43,5 +48,21 @@ BirthsAndFertilityRatesAnnual <- BirthsAndFertilityRatesAnnual |>
               values_from = "Value")
 
 head(BirthsAndFertilityRatesAnnual)
+
+BirthsAndFertilityRatesAnnual <- BirthsAndFertilityRatesAnnual[, -c(3:15, 17,18)]
+
+head(BirthsAndFertilityRatesAnnual)
+```
+The data must be changed into a tsibble for further analysis.
+The variables are also given more appropriate names.
+
+```{r}
+
+BirthFertilityRates<- as_tsibble(BirthsAndFertilityRatesAnnual,
+                  index = Year) |>
+  rename(year = Year, TFR = "Total Fertility Rate (TFR)",
+         TLB = "Total Live-Births") 
+
+head(BirthFertilityRates)
 
 ```
