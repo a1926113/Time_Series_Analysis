@@ -19,6 +19,7 @@ library(tsibble)
 library(feasts)
 library(fable)
 library(ggplot2)
+library(forecast)
 ```
 
 ### GitHub Repository:
@@ -73,13 +74,21 @@ BirthFertilityRates<- as_tsibble(BirthsAndFertilityRatesAnnual,
 head(BirthFertilityRates)
 
 ```
+For the purpose of this report, the data from 1960-2012 will be used to create time series models for prediction of the total live births and total fertility rate from 2013-2024. 
+
+The data will be split into a new tsibble called BFR1 with the data from these date ranges. 
+
+```{r}
+BFR1 <- BirthFertilityRates[1:53,]
+```
+
 Plots of the total fertility rate, and total live births per year in Singapore are visualized to get an overview of the data and identify patterns that will need to be considered when fitting the final models  for prediction.
 
-Figure 1 shows a non seasonal, non linear decreasing trend of the total fertility rate in Singapore from 1960 to 2025.
+Figure 1 shows a non seasonal, non linear decreasing trend of the total fertility rate in Singapore from 1960 to 2012.
 
 
-```{r, warning=FALSE, fig.cap = "Time plot of total fertility for Singapore per year from 1960-2025", out.width="50%", fig.align="center",fig.show='asis'}
-BirthFertilityRates |>
+```{r, warning=FALSE, fig.cap = "Time plot of total fertility rate for Singapore per year from 1960-2012", out.width="50%", fig.align="center",fig.show='asis'}
+BFR1 |>
   autoplot(TFR) +
   labs(x = "Year",
        y = "Total Fertility Rate", 
@@ -87,12 +96,29 @@ BirthFertilityRates |>
 ```
 \FloatBarrier
 
-The plot of the total live births in per year in Singapore in Figure 2 shows a non seasonal decreasing trend. Additionally, there may be a cyclic component that is not currently obvious. 
+The plot of the total live births per year in Singapore in Figure 2 shows a non seasonal decreasing trend. There is a large spike from 1986 to 1987 that should be investigated, there may be a long term cyclic component that is not currently obvious from range of dates observed. 
 
-```{r, warning=FALSE, fig.cap="Time plot of total live births for Singapore per year from 1960-2025", out.width="50%", fig.align="center", fig.show='asis'}
-BirthFertilityRates |>
+```{r, warning=FALSE, fig.cap="Time plot of total live births for Singapore per year from 1960-2012", out.width="50%", fig.align="center", fig.show='asis'}
+BFR1 |>
   autoplot(TLB) +
   labs(x = "Year",
        y = "Total Live Births",
        title = "Total Live Births Per Year in Singapore")
+```
+\FloatBarrier
+
+The total fertility birth per year in Singapore will be considered first. Before fitting an appropriate time series model the data will need to be made linear for simplicity. This will be achieved by doing a log-transform on the data for the total fertility rate.
+
+Figure 3 now shows an approximately linear downwards trend. There is also a more obvious jump in the total fertility rate during the mid 1980's, around a similar time that figure 2 showed a sharp increase in total live births. It may be beneficial to investigate additional factors such as immigration rates and economic influences to determine a possible cause for this spike. 
+
+```{r, warning=FALSE, fig.cap = "Time plot of the log-transformed fertility rate in Singapore from 1960-2012", out.width="50%", fig.align="center",fig.show='asis'}
+
+BFR1 <- BFR1 |>
+  mutate(TFR.log = log(TFR))
+
+BFR1 |>
+  autoplot(TFR.log) +
+  labs(x = "Year",
+       y = "Total Fertility Rate", 
+       title = "Total Fertility Rate Per Year in Singapore")
 ```
