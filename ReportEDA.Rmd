@@ -2,7 +2,12 @@
 title: "Singapore Birth and Fertility EDA"
 author: "Ebony Hunt"
 date: "2026-03-19"
-output: pdf_document
+output:
+  pdf_document: 
+    keep_tex: true
+  html_document: default
+header-includes:
+  \usepackage{placeins}
 ---
 
 ```{r setup, include=FALSE}
@@ -16,16 +21,19 @@ library(fable)
 library(ggplot2)
 ```
 
-### github Repository: <https://github.com/a1926113/Time_Series_Analysis>
+### GitHub Repository:
 
-Read in the data
+### <https://github.com/a1926113/Time_Series_Analysis>
+
+Firstly, the data is read in. This is a tsibble with data collected from 1960 - 2025 detailing the annual birth and fertility rates in Singapore, collected by the Singapore Department of Statistics. 
 
 ```{r read_data, warning=FALSE, show_col_types = FALSE}
-BirthsAndFertilityRatesAnnual <- read_csv("C:/Users/ebony/OneDrive - University of Adelaide/Desktop/2026 Time Series/BirthsAndFertilityRatesAnnual (1).csv")
-
-head(BirthsAndFertilityRatesAnnual)
+BirthsAndFertilityRatesAnnual <- 
+  read_csv("C:/Users/ebony/OneDrive - University of Adelaide/Desktop/2026 Time Series/BirthsAndFertilityRatesAnnual (1).csv")
 ```
-There are some years that are character variables, and some years that are doubles. Every year is converted to doubles and data listed as "na" is reformatted to be a correct NA.
+
+There are some years that are character variables, and some years that are doubles. Every year is converted to doubles and data listed as "na" is transformed into correctly formatted NAs.
+
 ```{r to_double}
 
 BirthsAndFertilityRatesAnnual <- BirthsAndFertilityRatesAnnual |>
@@ -33,10 +41,9 @@ BirthsAndFertilityRatesAnnual <- BirthsAndFertilityRatesAnnual |>
   mutate(across(2:67, ~na_if(., "na"))) |>
   mutate(across(2:67, as.double))
 
-BirthsAndFertilityRatesAnnual$Year <- as.integer(BirthsAndFertilityRatesAnnual$Year)
+```
 
-``` 
-The data is not in an optimal format. The years become the rows and the variables become the columns. The report is only looking to investigate the Total Fertility Rate, and the Total Live Births so every other column will also be filtered out. 
+The data is not in an optimal format, with each year listed as a column. The data is transformed so that the years become the rows and the variables become the columns. The report is only looking to investigate the Total Fertility Rate, and the Total Live Births so every other column will also be filtered out.
 
 ```{r pivot_longer,warning=FALSE}
 
@@ -47,14 +54,14 @@ BirthsAndFertilityRatesAnnual <- BirthsAndFertilityRatesAnnual |>
   pivot_wider(names_from = DataSeries,
               values_from = "Value")
 
-head(BirthsAndFertilityRatesAnnual)
+BirthsAndFertilityRatesAnnual$Year <-as.integer(BirthsAndFertilityRatesAnnual$"Year")
 
 BirthsAndFertilityRatesAnnual <- BirthsAndFertilityRatesAnnual[, -c(3:15, 17,18)]
 
 head(BirthsAndFertilityRatesAnnual)
 ```
-The data must be changed into a tsibble for further analysis.
-The variables are also given more appropriate names.
+
+The data must be changed into a tsibble for further analysis. The variables are also given the more appropriate names TFR, and TLB.
 
 ```{r}
 
@@ -65,4 +72,27 @@ BirthFertilityRates<- as_tsibble(BirthsAndFertilityRatesAnnual,
 
 head(BirthFertilityRates)
 
+```
+Plots of the total fertility rate, and total live births per year in Singapore are visualized to get an overview of the data and identify patterns that will need to be considered when fitting the final models  for prediction.
+
+Figure 1 shows a non seasonal, non linear decreasing trend of the total fertility rate in Singapore from 1960 to 2025.
+
+
+```{r, warning=FALSE, fig.cap = "Time plot of total fertility for Singapore per year from 1960-2025", out.width="50%", fig.align="center",fig.show='asis'}
+BirthFertilityRates |>
+  autoplot(TFR) +
+  labs(x = "Year",
+       y = "Total Fertility Rate", 
+       title = "Total Fertility Rate Per Year in Singapore")
+```
+\FloatBarrier
+
+The plot of the total live births in per year in Singapore in Figure 2 shows a non seasonal decreasing trend. Additionally, there may be a cyclic component that is not currently obvious. 
+
+```{r, warning=FALSE, fig.cap="Time plot of total live births for Singapore per year from 1960-2025", out.width="50%", fig.align="center", fig.show='asis'}
+BirthFertilityRates |>
+  autoplot(TLB) +
+  labs(x = "Year",
+       y = "Total Live Births",
+       title = "Total Live Births Per Year in Singapore")
 ```
