@@ -119,6 +119,35 @@ BFR1 <- BFR1 |>
 BFR1 |>
   autoplot(TFR.log) +
   labs(x = "Year",
-       y = "Total Fertility Rate", 
+       y = "Total Log Transformed Fertility Rate", 
        title = "Total Fertility Rate Per Year in Singapore")
+```
+
+The log transformed data will now be differenced to attempt to detrend the data. Figure 4 shows the data with a less obvious trend, appearing more stationary. An auto regressive model will be fit and an Autocorrelation Function (ACF) test will be run to determine if there are significant autocorrelations. 
+
+```{r, fig.cap = "Time plot of the log-transformed differenced fertility rate in Singapore from 1960-2012", out.width="50%", fig.align="center",fig.show='asis'}
+
+BFR1 <- BFR1 |> mutate(D.TFR.log = 
+                         difference(TFR.log, lag = 1))
+
+BFR1 |> autoplot(D.TFR.log) +
+  labs(x = "Year",
+       y = "Total long Transformed Differenced Fertility Rate", 
+       title = "Total Fertility Rate Per Year in Singapore")
+
+```
+
+Figure 5 shows a statistically signifiant autocorrelation at both 12 and 13.
+
+```{r,  = "ACF plot of the log-transformed differenced fertility rate in Singapore from 1960-2012", out.width="50%", fig.align="center",fig.show='asis'}
+
+BFR1.TFRmodel.ar <- BFR1 |>
+  filter(!is.na(D.TFR.log)) |>
+  model(
+    D.TFR.log.1 = AR(D.TFR.log ~ order(1))
+  )
+
+tidy(BFR1.TFRmodel.ar)
+
+augment(BFR1.TFRmodel.ar) |> ACF(.resid) |> autoplot()
 ```
