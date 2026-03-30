@@ -75,7 +75,7 @@ The data must be changed into a tsibble for further analysis. The variables are 
 ```{r}
 
 BFR  <-
-  as_tsibble(BFR1,
+  as_tsibble(BFR,
              index = Year) |>
   rename(year = Year, TFR = "Total Fertility Rate (TFR)",
          TLB = "Total Live-Births") 
@@ -130,7 +130,7 @@ For the purposes of the exploratory data analysis, models will be fit to the yea
 
 ```{r}
 
-BFR1 <- BirthsAndFertilityRatesAnnual[1:53, ]
+BFR1 <- BFR[1:53, ]
 
 ```
 
@@ -177,6 +177,7 @@ TFR.ar <- BFR1 |>
   )
 
 tidy(TFR.ar)
+
 ```
 
 The ACF plot in Figure 5 shows a significant lags the 5% level of significance at lag 12 and 13. As the confidence level is 5% it may be reasonable to expect that the plot shows one significant lag, however the presence of more than one of spikes and the magnitude of the spike at lag 12 suggests autocorrelation between lags.
@@ -191,10 +192,41 @@ augment(TFR.ar) |>
 
 \FloatBarrier
 
+The data will be differenced again with lag 24 to attempt to remove the autocorrelations between the residuals 
+An arima model will be fit to help address these autocorrelations.
+
+Figure 6 shows no significant lags at the 5% significance level. This indicates that the residuals are white noise. 
+
+```{r fig.cap = "ACF plot of the Total Fertility Rate autoregressive moving average model", out.width="50%", fig.align="center",fig.show='asis'}
+
+BFR1 <- BFR1 |> mutate(SD.TFR.log = 
+                         difference(D.TFR.log, lag = 24))
+
+TFR.arima <- BFR1 |> 
+  model( arima1 = ARIMA(SD.TFR.log ~ pdq(1,0,0)
+                        + PDQ(0,1,0)))
+
+augment(TFR.arima) |>
+  ACF(.resid) |> 
+  autoplot()
+
+```
+
+\FloatBarrier
+
+checking the Akaike Information Criterion (AIC) shows that the ARIMA model has a lower value confirming it a more accurate model for prediction. 
+
+```{r}
+
+glance(TFR.arima)
+
+glance(TFR.ar)
+
+```
 
 The Total Live Births per year in Singapore from 1960-2012 will now be considered. Before fitting an appropriate time series model the data will need to be differenced to attempt to detrend the time plot.
 
-Figure 6 shows the data with a less obvious trend, appearing more stationary. Similarly to the Fertility Rate time plot, the spike present in the data during the late 1980's is more pronounced. 
+Figure 7 shows the data with a less obvious trend, appearing more stationary. Similarly to the Fertility Rate time plot, the spike present in the data during the late 1980's is more pronounced. 
 
 
 ```{r, fig.cap = "Time plot of the differenced Live Births in Singapore from 1960-2012", out.width="50%", fig.align="center",fig.show='asis'}
@@ -219,10 +251,11 @@ TLB.ar <- BFR1 |>
   filter(!is.na(D.TLB)) |>
   model(D.ar1 = AR(D.TLB ~ order(1)))
 
+tidy(TLB.ar)
+
 ```
 
-
-The ACF plot in Figure 7 shows a significant lags the 5% level of significance at lag 12 and 13 Suggesting autocorrelation between lags.
+The ACF plot in Figure 8 shows a significant lags the 5% level of significance at lags 12 and 13 Suggesting autocorrelation between lags.
 
 ```{r, fig.cap = "ACF plot of the Total Live Birth autoregressive model", out.width="50%", fig.align="center",fig.show='asis'}
 
@@ -234,4 +267,36 @@ augment(TLB.ar) |>
 
 \FloatBarrier
 
-In the final report, when more than one model has been created for each time series, there are a variety of methods that can be used to test which model is best for prediction. The Akaike Information Criterion (AIC) for each model can be compared, with the lower value being the preferred model. Additionally, the root mean squared error of the predictions can be tested to see how much they differ from the data recorded from 2013-2024. A visual inspection can also useful to assess the accuracy of the predictions. 
+Using the same technique that was used to refine the total fertility rate model he data will be differenced again with lag 24 to attempt to remove the autocorrelations between the residuals.
+An arima model will be fit to help address these autocorrelations.
+
+Figure 9 shows no significant lags at the 5% significance level. This indicates that the residuals are white noise. 
+
+```{r, fig.cap = "ACF plot of the Total Live Birth autoregressive moving average model", out.width="50%", fig.align="center",fig.show='asis'}
+
+BFR1 <- BFR1 |> mutate(SD.TLB = 
+                         difference(D.TLB, lag = 24))
+
+TLB.arima <- BFR1 |> 
+  model( arima1 = ARIMA(SD.TLB ~ pdq(1,0,0)
+                        + PDQ(0,1,0)))
+
+augment(TLB.arima) |>
+  ACF(.resid) |> 
+  autoplot()
+
+```
+
+\FloatBarrier
+
+Checking the Akaike Information Criterion (AIC) shows that the ARIMA model has a significantly higher value meaning it is not as effective for prediction as the autoregressive model despite the fact there are no autocorrelated lags. 
+
+```{r}
+
+glance(TLB.arima)
+
+glance(TLB.ar)
+
+```
+
+In the final report, when more than one model has been created for each time series, there are a variety of methods that can be used to test which model is best for prediction. The Akaike Information Criterion (AIC) or the Ljung-Box test for each model can be compared, with the lower value being the preferred model. Additionally, the root mean squared error of the predictions can be tested to see how much they differ from the data recorded from 2013-2024. A visual inspection can also useful to assess the accuracy of the predictions. 
