@@ -96,6 +96,14 @@ BFR1 |>
 ```
 \FloatBarrier
 
+Doing a portmanteau test for the Total Live Birth rate shows a p value of 3.086298e-11 indicating that the model likely have autocorrelated residuals. The result of the portmanteau test and clear evidence of a trend in Figure 1 indicate that the data is not stationary. 
+
+```{r}
+
+BFR1 |> features(TFR, portmanteau_tests)
+
+```
+
 The plot of the total live births per year in Singapore in Figure 2 shows a non seasonal decreasing trend. There is a large spike from 1986 to 1987 that should be investigated, there may be a long term cyclic component that is not currently obvious from range of dates observed. 
 
 ```{r, warning=FALSE, fig.cap="Time plot of total live births for Singapore per year from 1960-2012", out.width="50%", fig.align="center", fig.show='asis'}
@@ -107,9 +115,17 @@ BFR1 |>
 ```
 \FloatBarrier
 
+A portmanteau test of using the Total Live Births data shows produced a p-value of 5.987547e-10 indicated that it is highly likely there are autocorrelations between the residuals at at least one lag. Similarly the the Total Fertility rate data,the decreasing trend present in the time plot and the portmanteau test indicate that the data is nonstationary.
+
+```{r}
+
+BFR1 |> features(TLB, portmanteau_tests)
+
+```
+
 The total fertility birth per year in Singapore will be considered first. Before fitting an appropriate time series model the data will need to be made linear for simplicity. This will be achieved by doing a log-transform on the data for the total fertility rate.
 
-Figure 3 now shows an approximately linear downwards trend. There is also a more obvious jump in the total fertility rate during the mid 1980's, around a similar time that figure 2 showed a sharp increase in total live births. It may be beneficial to investigate additional factors such as immigration rates and economic influences to determine a possible cause for this spike. 
+Figure 3 now appears to show an approximately linear downwards trend. There is also a more obvious jump in the total fertility rate during the mid 1980's, around a similar time that figure 2 showed a sharp increase in total live births. It may be beneficial to investigate additional factors such as immigration rates and economic influences to determine a possible cause for this spike. 
 
 ```{r, warning=FALSE, fig.cap = "Time plot of the log-transformed fertility rate in Singapore from 1960-2012", out.width="50%", fig.align="center",fig.show='asis'}
 
@@ -123,8 +139,7 @@ BFR1 |>
        title = "Total Fertility Rate Per Year in Singapore")
 ```
 
-The log transformed data will now be differenced to attempt to detrend the data. Figure 4 shows the data with a less obvious trend, appearing more stationary. An auto regressive model will be fit and an Autocorrelation Function (ACF) test will be run to determine if there are significant autocorrelations. 
-
+The log transformed data will now be differenced to attempt to detrend the data. Figure 4 shows the data with a less obvious trend, appearing more stationary.
 ```{r, fig.cap = "Time plot of the log-transformed differenced fertility rate in Singapore from 1960-2012", out.width="50%", fig.align="center",fig.show='asis'}
 
 BFR1 <- BFR1 |> mutate(D.TFR.log = 
@@ -136,10 +151,32 @@ BFR1 |> autoplot(D.TFR.log) +
        title = "Total Fertility Rate Per Year in Singapore")
 
 ```
+\FloatBarrier
+
+Running a portmanteau test with this log transformed and differenced Fertility Rate data produced a p-value of 0.6161248. As this value is greater than 0.05 we can conclude there is no significant evidence that there is autocorrelation among the residuals at the 5% significance level. The residuals can be concluded to be white noise and the data is now stationary. 
+
+```{r}
+
+BFR1 |> features(D.TFR.log, portmanteau_tests)
+
+```
+
+An auto regressive model will be fit to the transformed and differenced data.
+
+```{r}
+TFR.model.ar <- BFR1 |> filter(!is.na(D.TFR.log)) |> model(DS_ar1 =
+AR(D.TFR.log ~ order(1)))
+
+tidy(TFR.model.ar)
+
+glance(TFR.model.ar)
+
+augment(TFR.model.ar) |> ACF(.resid) |> autoplot()
+```
 
 Figure 5 shows a statistically signifiant autocorrelation at both 12 and 13.
 
-```{r,  = "ACF plot of the log-transformed differenced fertility rate in Singapore from 1960-2012", out.width="50%", fig.align="center",fig.show='asis'}
+```{r, fig.cap = "ACF plot of the log-transformed differenced fertility rate in Singapore from 1960-2012", out.width="50%", fig.align="center",fig.show='asis'}
 
 BFR1.TFRmodel.ar <- BFR1 |>
   filter(!is.na(D.TFR.log)) |>
@@ -147,7 +184,12 @@ BFR1.TFRmodel.ar <- BFR1 |>
     D.TFR.log.1 = AR(D.TFR.log ~ order(1))
   )
 
+
+
 tidy(BFR1.TFRmodel.ar)
 
 augment(BFR1.TFRmodel.ar) |> ACF(.resid) |> autoplot()
+
+
+
 ```
