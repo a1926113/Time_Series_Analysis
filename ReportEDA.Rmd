@@ -66,7 +66,7 @@ For the purpose of this report, the data from 1960-2012 will be used to create t
 
 ```{r}
 
-BFR1 <- BirthsAndFertilityRatesAnnual[2:66, ]
+BFR <- BirthsAndFertilityRatesAnnual[2:66, ]
 
 ```
 
@@ -74,13 +74,13 @@ The data must be changed into a tsibble for further analysis. The variables are 
 
 ```{r}
 
-BFR1  <-
+BFR  <-
   as_tsibble(BFR1,
              index = Year) |>
   rename(year = Year, TFR = "Total Fertility Rate (TFR)",
          TLB = "Total Live-Births") 
 
-head(BFR1)
+head(BFR)
 
 ```
 
@@ -89,7 +89,7 @@ Plots of the total fertility rate, and total live births per year in Singapore a
 Figure 1 shows a non seasonal, non linear decreasing trend of the total fertility rate in Singapore from 1960 to 2024.
 
 ```{r, warning=FALSE, fig.cap = "Time plot of total fertility rate for Singapore per year from 1960-2024", out.width="50%", fig.align="center",fig.show='asis'}
-BFR1 |>
+BFR |>
   autoplot(TFR) +
   labs(x = "Year",
        y = "Total Fertility Rate", 
@@ -102,14 +102,14 @@ Doing a portmanteau test for the Total Live Birth rate shows a p value of 1.6231
 
 ```{r}
 
-BFR1 |> features(TFR, portmanteau_tests)
+BFR |> features(TFR, portmanteau_tests)
 
 ```
 
 The plot of the total live births per year in Singapore in Figure 2 shows a non seasonal decreasing trend. There is a large spike from 1986 to 1987 that should be investigated, there may be a long term cyclic component that is not currently obvious from range of dates observed.
 
 ```{r, warning=FALSE, fig.cap="Time plot of total live births for Singapore per year from 1960-2024", out.width="50%", fig.align="center", fig.show='asis'}
-BFR1 |>
+BFR |>
   autoplot(TLB) +
   labs(x = "Year",
        y = "Total Live Births",
@@ -122,7 +122,15 @@ A portmanteau test of using the Total Live Births data produced a p-value of 7.6
 
 ```{r}
 
-BFR1 |> features(TLB, portmanteau_tests)
+BFR |> features(TLB, portmanteau_tests)
+
+```
+
+For the purposes of the exploratory data analysis, models will be fit to the years 1960-2012. The new tsibble with these dates will be given the name BFR1
+
+```{r}
+
+BFR1 <- BirthsAndFertilityRatesAnnual[1:53, ]
 
 ```
 
@@ -144,7 +152,7 @@ BFR1 |>
 
 The log transformed data will now be differenced to attempt to detrend the data. Figure 4 shows the data with a less obvious trend, appearing more stationary. The spike present in the data during the late 1980's is more pronounced. 
 
-```{r, fig.cap = "Time plot of the log-transformed differenced fertility rate in Singapore from 1960-2024", out.width="50%", fig.align="center",fig.show='asis'}
+```{r, fig.cap = "Time plot of the log-transformed differenced fertility rate in Singapore from 1960-2012", out.width="50%", fig.align="center",fig.show='asis'}
 
 BFR1 <- BFR1 |> mutate(D.TFR.log = 
                          difference(TFR.log, lag = 1))
@@ -171,7 +179,7 @@ TFR.ar <- BFR1 |>
 tidy(TFR.ar)
 ```
 
-The ACF plot in Figure 5 shows a significant lags the 5% level of significance at lag 11, 12 and 13. As the confidence level is 5% it may be reasonable to expect that the plot shows one significant lag, however the presence of more than one of spikes and the magnitude of the spikes at lag 12 and 13 suggests autocorrelation between lags.
+The ACF plot in Figure 5 shows a significant lags the 5% level of significance at lag 12 and 13. As the confidence level is 5% it may be reasonable to expect that the plot shows one significant lag, however the presence of more than one of spikes and the magnitude of the spike at lag 12 suggests autocorrelation between lags.
 
 ```{r, fig.cap = "ACF plot of the Total Fertility Rate autoregressive model", out.width="50%", fig.align="center",fig.show='asis'}
 
@@ -184,12 +192,12 @@ augment(TFR.ar) |>
 \FloatBarrier
 
 
-The Total Live Births per year in Singapore from 1960-2024 will now be considered. Before fitting an appropriate time series model the data will need to be differenced to attempt to detrend the time plot.
+The Total Live Births per year in Singapore from 1960-2012 will now be considered. Before fitting an appropriate time series model the data will need to be differenced to attempt to detrend the time plot.
 
 Figure 6 shows the data with a less obvious trend, appearing more stationary. Similarly to the Fertility Rate time plot, the spike present in the data during the late 1980's is more pronounced. 
 
 
-```{r, fig.cap = "Time plot of the differenced Live Births in Singapore from 1960-2024", out.width="50%", fig.align="center",fig.show='asis'}
+```{r, fig.cap = "Time plot of the differenced Live Births in Singapore from 1960-2012", out.width="50%", fig.align="center",fig.show='asis'}
 
 BFR1 <- BFR1 |> mutate(D.TLB = 
                          difference(TLB, lag = 1))
@@ -201,7 +209,10 @@ BFR1 |> autoplot(D.TLB) +
 
 ```
 
+\FloatBarrier
+
 An auto regressive model will be fit to the differenced data.
+
 ```{r}
 
 TLB.ar <- BFR1 |>
@@ -211,7 +222,7 @@ TLB.ar <- BFR1 |>
 ```
 
 
-The ACF plot in Figure 7 shows a significant lags the 5% level of significance at lag 11, 12 and 13. Suggesting autocorrelation between lags.
+The ACF plot in Figure 7 shows a significant lags the 5% level of significance at lag 12 and 13 Suggesting autocorrelation between lags.
 
 ```{r, fig.cap = "ACF plot of the Total Live Birth autoregressive model", out.width="50%", fig.align="center",fig.show='asis'}
 
@@ -220,3 +231,7 @@ augment(TLB.ar) |>
   autoplot()
 
 ```
+
+\FloatBarrier
+
+In the final report, when more than one model has been created for each time series, there are a variety of methods that can be used to test which model is best for prediction. The Akaike Information Criterion (AIC) for each model can be compared, with the lower value being the preferred model. Additionally, the root mean squared error of the predictions can be tested to see how much they differ from the data recorded from 2013-2024. A visual inspection can also useful to assess the accuracy of the predictions. 
