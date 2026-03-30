@@ -177,7 +177,7 @@ tidy(TFR.model.ar)
 
 ```
 
-The ACF plot in Figure 5 shows a significant lags the 5% level at lag 12 and lag 13. There is also a nearly significant lat at lag 11. As the confidence level is 5% it may be reasonable to expect that the plot shows one significant lag, however the presence of these spikes suggests autocorrelation between lags.
+The ACF plot in Figure 5 shows a significant lags the 5% level at lag 12 and lag 13. There is also a nearly significant lat at lag 11. As the confidence level is 5% it may be reasonable to expect that the plot shows one significant lag, however the presence of more than one of spikes and the magnitude of the spike at lag 12 suggests autocorrelation between lags.
 
 ```{r, fig.cap = "ACF plot of the Total Fertility Rate autoregressive model", out.width="50%", fig.align="center",fig.show='asis'}
 
@@ -185,22 +185,63 @@ augment(TFR.model.ar) |>
   ACF(.resid) |> 
   autoplot()
 
+
+glance(TFR.model.ar)
 ```
 
-Figure 5 shows a statistically signifiant autocorrelation at both 12 and 13.
+\FloatBarrier
 
-```{r, fig.cap = "ACF plot of the log-transformed differenced fertility rate in Singapore from 1960-2012", out.width="50%", fig.align="center",fig.show='asis'}
+The Total Fertility Rate data will be seasonally referenced to help account for the autocorrelation at lag12.
 
-BFR1.TFRmodel.ar <- BFR1 |>
-  filter(!is.na(D.TFR.log)) |>
-  model(
-    D.TFR.log.1 = AR(D.TFR.log ~ order(1))
-  )
+```{r}
+BFR1 <- BFR1 |> mutate(SD.TFR.log = 
+                         difference(TFR.log, lag = 12))
 
 
+fit <- BFR1 %>%
+  model(seasonal_ma = ARIMA(D.TFR.log ~ pdq(0,0,0) + PDQ(0,0,1, period = 12)))
 
-tidy(BFR1.TFRmodel.ar)
+augment(fit) |>
+  ACF(.resid) |> 
+  autoplot()
 
-augment(BFR1.TFRmodel.ar) |> ACF(.resid) |> autoplot()
+fit <- auto.arima(BFR1$D.TFR.log, seasonal = TRUE)
+glance(fit)
+augment(fit) |>
+  ACF(.resid) |> 
+  autoplot()
 
+```
+
+Another autoregressive model with the seasonally differenced data will be fit to see if this provides a better model for esitmation.
+
+```{r}
+TFR.model.ar.2 <- BFR1 |>
+  filter(!is.na(SD.TFR.log)) |>
+  model(D.ar1 = AR(SD.TFR.log ~ order(1)))
+
+tidy(TFR.model.ar.2)
+```
+
+The Total Birth Rate per year in Singapore will now be considered. Before fitting an appropriate time series model the data will need to be differenced so that is stationary
+
+Figure 6 appears to show an approximately linear downwards trend. There is also a more obvious jump in the total fertility rate during the mid 1980's, around a similar time that Figure 2 showed a sharp increase in total live births. It may be beneficial to investigate additional factors such as immigration rates and economic influences to determine a possible cause for this spike.
+
+```{r, fig.cap = "Time plot of the log-transformed differenced fertility rate in Singapore from 1960-2024", out.width="50%", fig.align="center",fig.show='asis'}
+
+BFR1 <- BFR1 |> mutate(D.TLB = 
+                         difference(TLB, lag = 1))
+
+BFR1 |> autoplot(D.TLB) +
+  labs(x = "Year",
+       y = "Total Differenced Birth Rate", 
+       title = "Total Difference Birth Rate Per Year in Singapore")
+
+TLB.model.ar <- BFR1 |>
+  filter(!is.na(D.TLB)) |>
+  model(D.ar1 = AR(D.TLB ~ order(1)))
+
+augment(TLB.model.ar) |>
+  ACF(.resid) |> 
+  autoplot()
 ```
