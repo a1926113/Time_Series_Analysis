@@ -142,7 +142,7 @@ BFR1 |>
        title = "Total Fertility Rate Per Year in Singapore")
 ```
 
-The log transformed data will now be differenced to attempt to detrend the data. Figure 4 shows the data with a less obvious trend, appearing more stationary.
+The log transformed data will now be differenced to attempt to detrend the data. Figure 4 shows the data with a less obvious trend, appearing more stationary. The spike present in the data during the late 1980's is more pronounced. 
 
 ```{r, fig.cap = "Time plot of the log-transformed differenced fertility rate in Singapore from 1960-2024", out.width="50%", fig.align="center",fig.show='asis'}
 
@@ -158,90 +158,65 @@ BFR1 |> autoplot(D.TFR.log) +
 
 \FloatBarrier
 
-Running a portmanteau test with this log transformed and differenced Fertility Rate data produced a p-value of 0.8362441 . As this value is greater than 0.05 we can conclude there is no significant evidence that there is autocorrelation among the residuals at the 5% significance level. The residuals can be concluded to be white noise and the data is now stationary.
-
-```{r}
-
-BFR1 |> features(D.TFR.log, portmanteau_tests)
-
-```
-
 An auto regressive model will be fit to the transformed and differenced data.
 
 ```{r}
-TFR.model.ar <- BFR1 |>
+TFR.ar <- BFR1 |> 
+  # remove NAs from differencing before model
   filter(!is.na(D.TFR.log)) |>
-  model(D.ar1 = AR(D.TFR.log ~ order(1)))
+  model(
+    D.ar = AR(D.TFR.log ~ order(1))
+  )
 
-tidy(TFR.model.ar)
-
+tidy(TFR.ar)
 ```
 
-The ACF plot in Figure 5 shows a significant lags the 5% level at lag 12 and lag 13. There is also a nearly significant lat at lag 11. As the confidence level is 5% it may be reasonable to expect that the plot shows one significant lag, however the presence of more than one of spikes and the magnitude of the spike at lag 12 suggests autocorrelation between lags.
+The ACF plot in Figure 5 shows a significant lags the 5% level of significance at lag 11, 12 and 13. As the confidence level is 5% it may be reasonable to expect that the plot shows one significant lag, however the presence of more than one of spikes and the magnitude of the spikes at lag 12 and 13 suggests autocorrelation between lags.
 
 ```{r, fig.cap = "ACF plot of the Total Fertility Rate autoregressive model", out.width="50%", fig.align="center",fig.show='asis'}
 
-augment(TFR.model.ar) |>
+augment(TFR.ar) |>
   ACF(.resid) |> 
   autoplot()
 
-
-glance(TFR.model.ar)
 ```
 
 \FloatBarrier
 
-The Total Fertility Rate data will be seasonally referenced to help account for the autocorrelation at lag12.
 
-```{r}
-BFR1 <- BFR1 |> mutate(SD.TFR.log = 
-                         difference(TFR.log, lag = 12))
+The Total Live Births per year in Singapore from 1960-2024 will now be considered. Before fitting an appropriate time series model the data will need to be differenced to attempt to detrend the time plot.
+
+Figure 6 shows the data with a less obvious trend, appearing more stationary. Similarly to the Fertility Rate time plot, the spike present in the data during the late 1980's is more pronounced. 
 
 
-fit <- BFR1 %>%
-  model(seasonal_ma = ARIMA(D.TFR.log ~ pdq(0,0,0) + PDQ(0,0,1, period = 12)))
-
-augment(fit) |>
-  ACF(.resid) |> 
-  autoplot()
-
-fit <- auto.arima(BFR1$D.TFR.log, seasonal = TRUE)
-glance(fit)
-augment(fit) |>
-  ACF(.resid) |> 
-  autoplot()
-
-```
-
-Another autoregressive model with the seasonally differenced data will be fit to see if this provides a better model for esitmation.
-
-```{r}
-TFR.model.ar.2 <- BFR1 |>
-  filter(!is.na(SD.TFR.log)) |>
-  model(D.ar1 = AR(SD.TFR.log ~ order(1)))
-
-tidy(TFR.model.ar.2)
-```
-
-The Total Birth Rate per year in Singapore will now be considered. Before fitting an appropriate time series model the data will need to be differenced so that is stationary
-
-Figure 6 appears to show an approximately linear downwards trend. There is also a more obvious jump in the total fertility rate during the mid 1980's, around a similar time that Figure 2 showed a sharp increase in total live births. It may be beneficial to investigate additional factors such as immigration rates and economic influences to determine a possible cause for this spike.
-
-```{r, fig.cap = "Time plot of the log-transformed differenced fertility rate in Singapore from 1960-2024", out.width="50%", fig.align="center",fig.show='asis'}
+```{r, fig.cap = "Time plot of the differenced Live Births in Singapore from 1960-2024", out.width="50%", fig.align="center",fig.show='asis'}
 
 BFR1 <- BFR1 |> mutate(D.TLB = 
                          difference(TLB, lag = 1))
 
 BFR1 |> autoplot(D.TLB) +
   labs(x = "Year",
-       y = "Total Differenced Birth Rate", 
-       title = "Total Difference Birth Rate Per Year in Singapore")
+       y = "Total Differenced Live Births", 
+       title = "Total Differenced Live Births Per Year in Singapore")
 
-TLB.model.ar <- BFR1 |>
+```
+
+An auto regressive model will be fit to the differenced data.
+```{r}
+
+TLB.ar <- BFR1 |>
   filter(!is.na(D.TLB)) |>
   model(D.ar1 = AR(D.TLB ~ order(1)))
 
-augment(TLB.model.ar) |>
+```
+
+
+The ACF plot in Figure 7 shows a significant lags the 5% level of significance at lag 11, 12 and 13. Suggesting autocorrelation between lags.
+
+```{r, fig.cap = "ACF plot of the Total Live Birth autoregressive model", out.width="50%", fig.align="center",fig.show='asis'}
+
+augment(TLB.ar) |>
   ACF(.resid) |> 
   autoplot()
+
 ```
