@@ -26,7 +26,7 @@ library(forecast)
 
 ### <https://github.com/a1926113/Time_Series_Analysis>
 
-Firstly, the data is read in. This is a tsibble with data collected from 1960 - 2025 detailing the annual birth and fertility rates in Singapore, collected by the Singapore Department of Statistics. 
+Firstly, the data is read in. This is a tsibble with data collected from 1960 - 2025 detailing the annual birth and fertility rates in Singapore, collected by the Singapore Department of Statistics.
 
 ```{r read_data, warning=FALSE, show_col_types = FALSE}
 BirthsAndFertilityRatesAnnual <- 
@@ -62,41 +62,43 @@ BirthsAndFertilityRatesAnnual <- BirthsAndFertilityRatesAnnual[, -c(3:15, 17,18)
 head(BirthsAndFertilityRatesAnnual)
 ```
 
-The data must be changed into a tsibble for further analysis. The variables are also given the more appropriate names TFR, and TLB.
+For the purpose of this report, the data from 1960-2012 will be used to create time series models for prediction of the total live births and total fertility rate from 2013-2024. However, for the exploratory data analysis the data set from 1960-2024 will be considered. The new tibble with these dates will be created and called BFR1 for simplicity
 
 ```{r}
 
-BirthFertilityRates<- as_tsibble(BirthsAndFertilityRatesAnnual,
-                  index = Year) |>
+BFR1 <- BirthsAndFertilityRatesAnnual[2:66, ]
+
+```
+
+The data must be changed into a tsibble for further analysis. The variables are also given the more appropriate names TFR, and TLB. Additionally, the tsibble is renamed BFR1 for simplicity
+
+```{r}
+
+BFR1  <-
+  as_tsibble(BFR1,
+             index = Year) |>
   rename(year = Year, TFR = "Total Fertility Rate (TFR)",
          TLB = "Total Live-Births") 
 
-head(BirthFertilityRates)
+head(BFR1)
 
 ```
-For the purpose of this report, the data from 1960-2012 will be used to create time series models for prediction of the total live births and total fertility rate from 2013-2024. 
 
-The data will be split into a new tsibble called BFR1 with the data from these date ranges. 
+Plots of the total fertility rate, and total live births per year in Singapore are visualized to get an overview of the data and identify patterns that will need to be considered when fitting the final models for prediction.
 
-```{r}
-BFR1 <- BirthFertilityRates[1:53,]
-```
+Figure 1 shows a non seasonal, non linear decreasing trend of the total fertility rate in Singapore from 1960 to 2024.
 
-Plots of the total fertility rate, and total live births per year in Singapore are visualized to get an overview of the data and identify patterns that will need to be considered when fitting the final models  for prediction.
-
-Figure 1 shows a non seasonal, non linear decreasing trend of the total fertility rate in Singapore from 1960 to 2012.
-
-
-```{r, warning=FALSE, fig.cap = "Time plot of total fertility rate for Singapore per year from 1960-2012", out.width="50%", fig.align="center",fig.show='asis'}
+```{r, warning=FALSE, fig.cap = "Time plot of total fertility rate for Singapore per year from 1960-2024", out.width="50%", fig.align="center",fig.show='asis'}
 BFR1 |>
   autoplot(TFR) +
   labs(x = "Year",
        y = "Total Fertility Rate", 
        title = "Total Fertility Rate Per Year in Singapore")
 ```
+
 \FloatBarrier
 
-Doing a portmanteau test for the Total Live Birth rate shows a p value of 3.086298e-11 indicating that the model likely have autocorrelated residuals. The result of the portmanteau test and clear evidence of a trend in Figure 1 indicate that the data is not stationary. 
+Doing a portmanteau test for the Total Live Birth rate shows a p value of 1.623146e-13 indicating that the model likely have at least one autocorrelated residual. The result of the portmanteau test and clear evidence of a trend in Figure 1 indicate that the data is not stationary.
 
 ```{r}
 
@@ -104,18 +106,19 @@ BFR1 |> features(TFR, portmanteau_tests)
 
 ```
 
-The plot of the total live births per year in Singapore in Figure 2 shows a non seasonal decreasing trend. There is a large spike from 1986 to 1987 that should be investigated, there may be a long term cyclic component that is not currently obvious from range of dates observed. 
+The plot of the total live births per year in Singapore in Figure 2 shows a non seasonal decreasing trend. There is a large spike from 1986 to 1987 that should be investigated, there may be a long term cyclic component that is not currently obvious from range of dates observed.
 
-```{r, warning=FALSE, fig.cap="Time plot of total live births for Singapore per year from 1960-2012", out.width="50%", fig.align="center", fig.show='asis'}
+```{r, warning=FALSE, fig.cap="Time plot of total live births for Singapore per year from 1960-2024", out.width="50%", fig.align="center", fig.show='asis'}
 BFR1 |>
   autoplot(TLB) +
   labs(x = "Year",
        y = "Total Live Births",
        title = "Total Live Births Per Year in Singapore")
 ```
+
 \FloatBarrier
 
-A portmanteau test of using the Total Live Births data shows produced a p-value of 5.987547e-10 indicated that it is highly likely there are autocorrelations between the residuals at at least one lag. Similarly the the Total Fertility rate data,the decreasing trend present in the time plot and the portmanteau test indicate that the data is nonstationary.
+A portmanteau test of using the Total Live Births data produced a p-value of 7.66609e-12 indicating that it is highly likely there are autocorrelations between the residuals at at least one lag. Similarly to thhe Total Fertility rate data,the decreasing trend present in the time plot and the portmanteau test indicate that the data is nonstationary.
 
 ```{r}
 
@@ -123,9 +126,9 @@ BFR1 |> features(TLB, portmanteau_tests)
 
 ```
 
-The total fertility birth per year in Singapore will be considered first. Before fitting an appropriate time series model the data will need to be made linear for simplicity. This will be achieved by doing a log-transform on the data for the total fertility rate.
+The total fertility rate per year in Singapore will be considered first. Before fitting an appropriate time series model the data will need to be made linear for simplicity. This will be achieved by doing a log-transform on the data for the total fertility rate.
 
-Figure 3 now appears to show an approximately linear downwards trend. There is also a more obvious jump in the total fertility rate during the mid 1980's, around a similar time that figure 2 showed a sharp increase in total live births. It may be beneficial to investigate additional factors such as immigration rates and economic influences to determine a possible cause for this spike. 
+Figure 3 now appears to show an approximately linear downwards trend. There is also a more obvious jump in the total fertility rate during the mid 1980's, around a similar time that Figure 2 showed a sharp increase in total live births. It may be beneficial to investigate additional factors such as immigration rates and economic influences to determine a possible cause for this spike.
 
 ```{r, warning=FALSE, fig.cap = "Time plot of the log-transformed fertility rate in Singapore from 1960-2012", out.width="50%", fig.align="center",fig.show='asis'}
 
@@ -140,7 +143,8 @@ BFR1 |>
 ```
 
 The log transformed data will now be differenced to attempt to detrend the data. Figure 4 shows the data with a less obvious trend, appearing more stationary.
-```{r, fig.cap = "Time plot of the log-transformed differenced fertility rate in Singapore from 1960-2012", out.width="50%", fig.align="center",fig.show='asis'}
+
+```{r, fig.cap = "Time plot of the log-transformed differenced fertility rate in Singapore from 1960-2024", out.width="50%", fig.align="center",fig.show='asis'}
 
 BFR1 <- BFR1 |> mutate(D.TFR.log = 
                          difference(TFR.log, lag = 1))
@@ -151,9 +155,10 @@ BFR1 |> autoplot(D.TFR.log) +
        title = "Total Fertility Rate Per Year in Singapore")
 
 ```
+
 \FloatBarrier
 
-Running a portmanteau test with this log transformed and differenced Fertility Rate data produced a p-value of 0.6161248. As this value is greater than 0.05 we can conclude there is no significant evidence that there is autocorrelation among the residuals at the 5% significance level. The residuals can be concluded to be white noise and the data is now stationary. 
+Running a portmanteau test with this log transformed and differenced Fertility Rate data produced a p-value of 0.8362441 . As this value is greater than 0.05 we can conclude there is no significant evidence that there is autocorrelation among the residuals at the 5% significance level. The residuals can be concluded to be white noise and the data is now stationary.
 
 ```{r}
 
@@ -164,14 +169,22 @@ BFR1 |> features(D.TFR.log, portmanteau_tests)
 An auto regressive model will be fit to the transformed and differenced data.
 
 ```{r}
-TFR.model.ar <- BFR1 |> filter(!is.na(D.TFR.log)) |> model(DS_ar1 =
-AR(D.TFR.log ~ order(1)))
+TFR.model.ar <- BFR1 |>
+  filter(!is.na(D.TFR.log)) |>
+  model(D.ar1 = AR(D.TFR.log ~ order(1)))
 
 tidy(TFR.model.ar)
 
-glance(TFR.model.ar)
+```
 
-augment(TFR.model.ar) |> ACF(.resid) |> autoplot()
+The ACF plot in Figure 5 shows a significant lags the 5% level at lag 12 and lag 13. There is also a nearly significant lat at lag 11. As the confidence level is 5% it may be reasonable to expect that the plot shows one significant lag, however the presence of these spikes suggests autocorrelation between lags.
+
+```{r, fig.cap = "ACF plot of the Total Fertility Rate autoregressive model", out.width="50%", fig.align="center",fig.show='asis'}
+
+augment(TFR.model.ar) |>
+  ACF(.resid) |> 
+  autoplot()
+
 ```
 
 Figure 5 shows a statistically signifiant autocorrelation at both 12 and 13.
@@ -189,7 +202,5 @@ BFR1.TFRmodel.ar <- BFR1 |>
 tidy(BFR1.TFRmodel.ar)
 
 augment(BFR1.TFRmodel.ar) |> ACF(.resid) |> autoplot()
-
-
 
 ```
